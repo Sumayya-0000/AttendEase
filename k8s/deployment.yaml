@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: attendance-tracker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: attendance-tracker
+  template:
+    metadata:
+      labels:
+        app: attendance-tracker
+    spec:
+      containers:
+        - name: attendance-tracker
+          image: DOCKERHUB_USER/attendance-tracker:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5000
+          env:
+            - name: DATABASE_PATH
+              value: /data/attendance.db
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: attendance-secret
+                  key: secret-key
+                  optional: true
+          volumeMounts:
+            - name: attendance-data
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      volumes:
+        - name: attendance-data
+          persistentVolumeClaim:
+            claimName: attendance-data
